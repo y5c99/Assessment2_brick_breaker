@@ -101,6 +101,7 @@ class Game(tk.Frame):
             # Move the canvas item by (x, y) offset
             self.canvas.move(self.paddle_id, offset, 0)
 
+
     
     def check_paddle_collision(self, ball_coords):
         """Checks if the ball hits the paddle and reverses the Y velocity."""
@@ -144,6 +145,30 @@ class Game(tk.Frame):
                 self.bricks.append(brick_id)
 
 
+
+
+    def check_brick_collision(self, ball_coords):
+        """Checks if the ball hits any brick, deletes the brick, and reverses velocity."""
+
+        # Tkinter's find_overlapping method returns a tuple of canvas IDs that overlap 
+        # with the ball's coordinates (left, top, right, bottom).
+        overlapping_objects = self.canvas.find_overlapping(*ball_coords)
+
+        # Iterate through the overlapping objects to find a brick
+        for obj_id in overlapping_objects:
+            if obj_id in self.bricks:
+                # 1. Remove the brick from the canvas
+                self.canvas.delete(obj_id)
+
+                # 2. Remove the brick ID from our list of active bricks
+                self.bricks.remove(obj_id)
+
+                # 3. Reverse the vertical velocity (bounce)
+                self.ball_dy *= -1
+
+                # 4. We only bounce off one brick per frame
+                return
+
     def game_loop(self):
         """
         The main game loop function, called repeatedly to update physics and drawing.
@@ -171,6 +196,8 @@ class Game(tk.Frame):
         self.check_paddle_collision(ball_coords)
 
         # 5. Handle collision with bricks (Logic for next commit)
+        ball_coords = self.canvas.coords(self.ball_id) # Need fresh coordinates
+        self.check_brick_collision(ball_coords)
 
         # 6. Schedule the next update (e.g., every 30 milliseconds)
         self.master.after(30, self.game_loop)
