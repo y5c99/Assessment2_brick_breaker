@@ -1,22 +1,29 @@
-# brick_breaker
+# brick_breaker_tk.py
+# A simple Brick Breaker game using Python's Tkinter with an improved front page.
 
 import tkinter as tk
+import sys
 
 # --- Game Constants ---
 WINDOW_WIDTH = 600
 WINDOW_HEIGHT = 400
 
-# --- Colors (Latest Polish) ---
-PADDLE_COLOR = '#FF9933'    # Orange
-BALL_COLOR = '#FFFF00'      # Yellow
-BACKGROUND_COLOR = '#1A0033' # Dark Purple
-BRICK_COLOR = '#33CCFF'     # Light Blue
+# --- Colors ---
+PADDLE_COLOR = '#FF9933'
+BALL_COLOR = '#FFFF00'
+BACKGROUND_COLOR = '#1A0033'
+BRICK_COLOR = '#33CCFF'
+FRONTPAGE_BG = '#2B003B'
+FRONTPAGE_PANEL = '#3D0070'
+BUTTON_COLOR = '#FFD966'
+BUTTON_HOVER = '#FFB347'
 
 # --- Ball & Movement Constants ---
+BASE_SPEED = 4
 BALL_RADIUS = 8
-BALL_START_DX = 4           # Initial horizontal speed
-BALL_START_DY = -4          # Initial vertical speed (upwards)
-PADDLE_SPEED = 15           # Pixels to move per key press
+BALL_START_DX = BASE_SPEED
+BALL_START_DY = -BASE_SPEED
+PADDLE_SPEED = 15
 
 # --- Game Objects Constants ---
 PADDLE_WIDTH = 100
@@ -36,180 +43,211 @@ BRICK_PADDING = 10
 BRICK_OFFSET_TOP = 40
 BRICK_OFFSET_LEFT = 35
 
-
-# --- Game Class (The Main Controller) ---
 class Game(tk.Frame):
     """Controls the main game window, canvas, and game loop."""
     def __init__(self, master):
-        # Initialise the Tkinter frame
-        super().__init__(master) 
+        super().__init__(master)
         master.title("Tkinter Brick Breaker")
 
-        # Setup the canvas where the game will be drawn
-        self.canvas = tk.Canvas(self, 
-                                bg=BACKGROUND_COLOR, 
-                                width=WINDOW_WIDTH, 
+        self.canvas = tk.Canvas(self,
+                                bg=BACKGROUND_COLOR,
+                                width=WINDOW_WIDTH,
                                 height=WINDOW_HEIGHT)
         self.canvas.pack(pady=10, padx=10)
         self.pack()
 
-        # --- 1. Create Game Objects and Assign IDs ---
-        
-        # Create Paddle
+        # Create game objects
         self.paddle_id = self.canvas.create_rectangle(
-            PADDLE_START_X, PADDLE_START_Y, 
-            PADDLE_START_X + PADDLE_WIDTH, PADDLE_START_Y + PADDLE_HEIGHT, 
+            PADDLE_START_X, PADDLE_START_Y,
+            PADDLE_START_X + PADDLE_WIDTH, PADDLE_START_Y + PADDLE_HEIGHT,
             fill=PADDLE_COLOR, tags='paddle_tag'
         )
-
-        # Create Ball
         self.ball_id = self.canvas.create_oval(
             BALL_START_X - BALL_RADIUS, BALL_START_Y - BALL_RADIUS,
             BALL_START_X + BALL_RADIUS, BALL_START_Y + BALL_RADIUS,
             fill=BALL_COLOR, tags='ball_tag'
         )
 
-        # Generate Bricks
+        # Game state
         self.bricks = []
-        self.setup_bricks() 
+        self.setup_bricks()
 
-        # --- 2. Initialize Game State ---
+        self.game_running = False
         self.ball_dx = BALL_START_DX
         self.ball_dy = BALL_START_DY
 
-        # --- 3. Bind Controls and Start Loop ---
+        # IDs for menu/frontpage widgets placed on canvas (so we can remove them)
+        self.frontpage_items = []
+
+        # Bindings
         self.master.bind('<Left>', lambda event: self.move_paddle(-PADDLE_SPEED))
         self.master.bind('<Right>', lambda event: self.move_paddle(PADDLE_SPEED))
+        self.master.bind('<Return>', lambda event: self.start_game())
 
-        # Start the game loop (MUST be called after all IDs are assigned)
+        # Display the new front page layout
+        self.show_frontpage()
         self.game_loop()
 
+    # --- Front Page ---
+    def show_frontpage(self):
+        """Render a nicer front page layout with gradient and buttons."""
+        self.hide_frontpage()
+
+        # Gradient background using multiple rectangles
+        for i in range(20):
+            color = f'#{hex(43 + i*5)[2:]}00{hex(59 + i*4)[2:]}'
+            self.canvas.create_rectangle(0, i*20, WINDOW_WIDTH, (i+1)*20, fill=color, outline=color, tags='fp')
+
+        # Semi-transparent panel
+        panel = self.canvas.create_rectangle(50, 50, WINDOW_WIDTH-50, WINDOW_HEIGHT-50,
+                                             fill=FRONTPAGE_PANEL, outline='#FFFFFF', width=2, tags='fp')
+        self.frontpage_items.append(panel)
+
+        # Title
+        title = self.canvas.create_text(WINDOW_WIDTH/2, 90, text='BRICK BREAKER',
+                                        font=('Helvetica', 42, 'bold'),
+                                        fill='#FFD966', tags='fp')
+        self.frontpage_items.append(title)
+
+        # Subtitle / tagline
+        subtitle = self.canvas.create_text(WINDOW_WIDTH/2, 140, text='Classic Arcade Fun!',
+                                           font=('Helvetica', 16), fill='#FFFFFF', tags='fp')
+        self.frontpage_items.append(subtitle)
+
+        # Logo placeholder
+        logo = self.canvas.create_oval(WINDOW_WIDTH/2 - 60, 160, WINDOW_WIDTH/2 + 60, 280,
+                                       fill='#4B0082', outline='#FFD966', width=4, tags='fp')
+        self.frontpage_items.append(logo)
+        logo_text = self.canvas.create_text(WINDOW_WIDTH/2, 220, text='BB', font=('Helvetica', 32, 'bold'),
+                                            fill='#FFD966', tags='fp')
+        self.frontpage_items.append(logo_text)
+
+        # Buttons
+        self.create_frontpage_button('Start Game', WINDOW_WIDTH/2 - 100, 320, self.start_game)
+        self.create_frontpage_button('Settings', WINDOW_WIDTH/2, 320, self.show_settings)
+        self.create_frontpage_button('Exit', WINDOW_WIDTH/2 + 100, 320, self.quit_game)
+
+        # Instructions
+        note = self.canvas.create_text(WINDOW_WIDTH/2, 360, text='Use ← → to move the paddle — Press ENTER to start',
+                                       font=('Helvetica', 10), fill='#CCCCCC', tags='fp')
+        self.frontpage_items.append(note)
+
+    def create_frontpage_button(self, text, x, y, command):
+        """Helper to create a canvas button with hover effect."""
+        btn = tk.Button(self.master, text=text, font=('Helvetica', 12, 'bold'),
+                        bg=BUTTON_COLOR, activebackground=BUTTON_HOVER, command=command)
+        btn_id = self.canvas.create_window(x, y, window=btn, tags='fp')
+        self.frontpage_items.append(btn_id)
+
+    def hide_frontpage(self):
+        self.canvas.delete('fp')
+        self.frontpage_items = []
+
+    def show_settings(self):
+        self.canvas.delete('fp')
+        s = self.canvas.create_text(WINDOW_WIDTH/2, WINDOW_HEIGHT/2,
+                                    text='Settings\n(coming soon)', font=('Helvetica', 20), fill='#FFFFFF', tags='settings')
+        back_btn = tk.Button(self.master, text='Back', command=lambda: (self.canvas.delete('settings'), self.show_frontpage()))
+        self.canvas.create_window(WINDOW_WIDTH/2, WINDOW_HEIGHT/2 + 60, window=back_btn, tags='settings')
+
+    # --- Game Functions ---
+    def start_game(self):
+        if not self.game_running:
+            self.hide_frontpage()
+            self.game_running = True
+            self.master.unbind('r')
+            self.master.unbind('q')
+
+    def reset_game(self, event=None):
+        self.canvas.delete("game_over_tag")
+        self.master.unbind('<space>')
+        self.master.unbind('<Escape>')
+        self.canvas.coords(self.paddle_id, PADDLE_START_X, PADDLE_START_Y,
+                           PADDLE_START_X + PADDLE_WIDTH, PADDLE_START_Y + PADDLE_HEIGHT)
+        self.canvas.coords(self.ball_id, BALL_START_X - BALL_RADIUS, BALL_START_Y - BALL_RADIUS,
+                           BALL_START_X + BALL_RADIUS, BALL_START_Y + BALL_RADIUS)
+        self.ball_dx = BALL_START_DX
+        self.ball_dy = -BALL_START_DY
+        self.setup_bricks()
+        self.game_running = False
+        self.show_frontpage()
+
+    def quit_game(self, event=None):
+        self.master.destroy()
+        sys.exit()
+
+    def game_over(self):
+        self.game_running = False
+        self.canvas.create_text(WINDOW_WIDTH / 2, WINDOW_HEIGHT / 3,
+                                text='GAME OVER!', fill='red',
+                                font=('Arial', 30, 'bold'), tags='game_over_tag')
+        self.canvas.create_text(WINDOW_WIDTH / 2, WINDOW_HEIGHT / 2,
+                                text='Press SPACE to Play Again', fill='white',
+                                font=('Arial', 18), tags='game_over_tag')
+        self.canvas.create_text(WINDOW_WIDTH / 2, WINDOW_HEIGHT / 2 + 40,
+                                text='Press ESC to Quit', fill='white',
+                                font=('Arial', 18), tags='game_over_tag')
+        self.master.bind('<space>', self.reset_game)
+        self.master.bind('<Escape>', self.quit_game)
 
     def move_paddle(self, offset):
-        """Moves the paddle object horizontally and checks boundaries."""
-        # 1. Get current coordinates (x1, y1, x2, y2)
+        if not self.game_running:
+            return
         coords = self.canvas.coords(self.paddle_id)
-        current_x1 = coords[0]
-        current_x2 = coords[2]
-
-        # 2. Calculate new position
-        new_x1 = current_x1 + offset
-        new_x2 = current_x2 + offset
-
-        # 3. Check boundaries (do not move off screen)
+        new_x1 = coords[0] + offset
+        new_x2 = coords[2] + offset
         if new_x1 >= 0 and new_x2 <= WINDOW_WIDTH:
-            # Move the canvas item by (x, y) offset
             self.canvas.move(self.paddle_id, offset, 0)
 
-
-    
     def check_paddle_collision(self, ball_coords):
-        """Checks if the ball hits the paddle and reverses the Y velocity."""
-
-        # Get ball boundaries: (left, top, right, bottom)
         ball_left, ball_top, ball_right, ball_bottom = ball_coords
-
-        # Get paddle boundaries
         paddle_coords = self.canvas.coords(self.paddle_id)
         paddle_left, paddle_top, paddle_right, paddle_bottom = paddle_coords
+        if self.ball_dy > 0 and ball_bottom >= paddle_top and ball_bottom <= paddle_bottom \
+                and ball_right >= paddle_left and ball_left <= paddle_right:
+            self.ball_dy *= -1
 
-        # Simple collision check:
-        # 1. Ball must be moving downwards (self.ball_dy > 0)
-        # 2. Ball's bottom edge must be below paddle's top edge
-        # 3. Ball must overlap horizontally with the paddle
-        if self.ball_dy > 0 and \
-           ball_bottom >= paddle_top and ball_bottom <= paddle_bottom and \
-           ball_right >= paddle_left and ball_left <= paddle_right:
-
-            self.ball_dy *= -1 # Reverse vertical direction
-
+    def check_brick_collision(self, ball_coords):
+        overlapping_objects = self.canvas.find_overlapping(*ball_coords)
+        for obj_id in overlapping_objects:
+            if obj_id in self.bricks:
+                self.canvas.delete(obj_id)
+                self.bricks.remove(obj_id)
+                self.ball_dy *= -1
+                return
 
     def setup_bricks(self):
-        """Generates and draws the initial grid of bricks on the canvas."""
-        # Loop through rows and columns to place bricks
+        self.canvas.delete('brick')
+        self.bricks = []
         for row in range(BRICK_ROWS):
             for col in range(BRICK_COLS):
-                # Calculate coordinates for the top-left and bottom-right corners
                 brick_x1 = BRICK_OFFSET_LEFT + col * (BRICK_WIDTH + BRICK_PADDING)
                 brick_y1 = BRICK_OFFSET_TOP + row * (BRICK_HEIGHT + BRICK_PADDING)
                 brick_x2 = brick_x1 + BRICK_WIDTH
                 brick_y2 = brick_y1 + BRICK_HEIGHT
-
-                # Create the rectangle object on the canvas
-                brick_id = self.canvas.create_rectangle(
-                    brick_x1, brick_y1, brick_x2, brick_y2, 
-                    fill=BRICK_COLOR, 
-                    tags='brick'
-                )
-                # Store the canvas ID for future reference (e.g., deletion on hit)
+                brick_id = self.canvas.create_rectangle(brick_x1, brick_y1, brick_x2, brick_y2,
+                                                        fill=BRICK_COLOR, tags='brick')
                 self.bricks.append(brick_id)
 
-
-
-
-    def check_brick_collision(self, ball_coords):
-        """Checks if the ball hits any brick, deletes the brick, and reverses velocity."""
-
-        # Tkinter's find_overlapping method returns a tuple of canvas IDs that overlap 
-        # with the ball's coordinates (left, top, right, bottom).
-        overlapping_objects = self.canvas.find_overlapping(*ball_coords)
-
-        # Iterate through the overlapping objects to find a brick
-        for obj_id in overlapping_objects:
-            if obj_id in self.bricks:
-                # 1. Remove the brick from the canvas
-                self.canvas.delete(obj_id)
-
-                # 2. Remove the brick ID from our list of active bricks
-                self.bricks.remove(obj_id)
-
-                # 3. Reverse the vertical velocity (bounce)
-                self.ball_dy *= -1
-
-                # 4. We only bounce off one brick per frame
-                return
-
     def game_loop(self):
-        """
-        The main game loop function, called repeatedly to update physics and drawing.
-        This function handles all movement and collision checks.
-        """
-
-        # 1. Update Ball Position (Animation)
-        self.canvas.move(self.ball_id, self.ball_dx, self.ball_dy) 
-
-        # 2. Get the new coordinates of the ball for boundary checking
-        ball_coords = self.canvas.coords(self.ball_id)
-        ball_left, ball_top, ball_right, ball_bottom = ball_coords
-
-        # 3. Handle Wall Collisions (Simple reflection)
-
-        # Check collision with Left or Right wall
-        if ball_left <= 0 or ball_right >= WINDOW_WIDTH:
-            self.ball_dx *= -1 # Reverse horizontal direction
-
-        # Check collision with Top wall
-        if ball_top <= 0:
-            self.ball_dy *= -1 # Reverse vertical direction
-        
-        # 4. Handle collision with the paddle
-        self.check_paddle_collision(ball_coords)
-
-        # 5. Handle collision with bricks (Logic for next commit)
-        ball_coords = self.canvas.coords(self.ball_id) # Need fresh coordinates
-        self.check_brick_collision(ball_coords)
-
-        # 6. Schedule the next update (e.g., every 30 milliseconds)
+        if self.game_running:
+            self.canvas.move(self.ball_id, self.ball_dx, self.ball_dy)
+            ball_coords = self.canvas.coords(self.ball_id)
+            ball_left, ball_top, ball_right, ball_bottom = ball_coords
+            if ball_bottom >= WINDOW_HEIGHT:
+                self.game_over()
+            if ball_left <= 0 or ball_right >= WINDOW_WIDTH:
+                self.ball_dx *= -1
+            if ball_top <= 0:
+                self.ball_dy *= -1
+            self.check_paddle_collision(ball_coords)
+            self.check_brick_collision(ball_coords)
+            if not self.bricks:
+                self.game_over()
         self.master.after(30, self.game_loop)
 
 
-# --- Application Entry Point ---
 if __name__ == "__main__":
-    # 1. Create the main Tkinter window instance
     root = tk.Tk()
-    
-    # 2. Instantiate the Game class
     game = Game(root)
-    
-    # 3. Start the Tkinter event loop (required for GUI)
     root.mainloop()
