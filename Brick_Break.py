@@ -95,7 +95,7 @@ class Game(tk.Frame):
 
         self.game_running = False
 
-        #  NEW — PAUSE VARIABLES
+        # NEW — PAUSE VARIABLES
         self.paused = False
         self.stored_dx = BALL_START_DX
         self.stored_dy = BALL_START_DY
@@ -232,35 +232,38 @@ class Game(tk.Frame):
                                         font=('Helvetica', 24, 'bold'),
                                         fill='white', tags='settings')
 
-        # --- Use last saved settings or defaults ---
-        ball_speed_default = getattr(self, 'temp_ball_speed', 'Normal')
-        paddle_size_default = getattr(self, 'temp_paddle_size', 'Normal')
-        brick_color_default = getattr(self, 'temp_brick_color', 'Blue')
+        # Default values for settings
+        self.temp_ball_speed = 'Normal'
+        self.temp_paddle_size = 'Normal'
+        self.temp_brick_color = 'Blue'
 
-        # --- Ball Speed Options ---
+        # --- Ball Speed ---
         tk.Label(self.master, text="Ball Speed:", bg=BACKGROUND_COLOR, fg='white').place(x=150, y=100)
-        speed_var = tk.StringVar(value=ball_speed_default)
+        self.settings_widgets.append(self.master.children[list(self.master.children.keys())[-1]])
+        speed_var = tk.StringVar(value=self.temp_ball_speed)
         speed_menu = tk.OptionMenu(self.master, speed_var, 'Slow', 'Normal', 'Fast')
         speed_menu.place(x=250, y=95)
         self.settings_widgets.append(speed_menu)
 
-        # --- Paddle Size Options ---
+        # --- Paddle Size ---
         tk.Label(self.master, text="Paddle Size:", bg=BACKGROUND_COLOR, fg='white').place(x=150, y=150)
-        paddle_var = tk.StringVar(value=paddle_size_default)
+        self.settings_widgets.append(self.master.children[list(self.master.children.keys())[-1]])
+        paddle_var = tk.StringVar(value=self.temp_paddle_size)
         paddle_menu = tk.OptionMenu(self.master, paddle_var, 'Small', 'Normal', 'Large')
         paddle_menu.place(x=250, y=145)
         self.settings_widgets.append(paddle_menu)
 
-        # --- Brick Color Options ---
+        # --- Brick Color ---
         tk.Label(self.master, text="Brick Color:", bg=BACKGROUND_COLOR, fg='white').place(x=150, y=200)
-        brick_var = tk.StringVar(value=brick_color_default)
+        self.settings_widgets.append(self.master.children[list(self.master.children.keys())[-1]])
+        brick_var = tk.StringVar(value=self.temp_brick_color)
         brick_menu = tk.OptionMenu(self.master, brick_var, 'Blue', 'Red', 'Green')
         brick_menu.place(x=250, y=195)
         self.settings_widgets.append(brick_menu)
 
         # --- Save button ---
         def save_settings():
-            # Save Ball Speed
+            # Apply Ball Speed
             val = speed_var.get()
             if val == 'Slow':
                 self.ball_dx = BASE_SPEED / 2
@@ -273,7 +276,7 @@ class Game(tk.Frame):
                 self.ball_dy = -BASE_SPEED * 1.5
             self.temp_ball_speed = val
 
-            # Save Paddle Size
+            # Apply Paddle Size
             val = paddle_var.get()
             global PADDLE_WIDTH
             if val == 'Small':
@@ -283,10 +286,11 @@ class Game(tk.Frame):
             elif val == 'Large':
                 PADDLE_WIDTH = 140
             self.temp_paddle_size = val
+            # Update paddle position
             self.canvas.coords(self.paddle_id, PADDLE_START_X, PADDLE_START_Y,
                             PADDLE_START_X + PADDLE_WIDTH, PADDLE_START_Y + PADDLE_HEIGHT)
 
-            # Save Brick Color
+            # Apply Brick Color
             val = brick_var.get()
             color_map = {'Blue':'#203F8C', 'Red':'#FF4C4C', 'Green':'#28B78F'}
             global BRICK_COLOR
@@ -294,7 +298,7 @@ class Game(tk.Frame):
             self.setup_bricks()
             self.temp_brick_color = val
 
-            # Close settings after saving
+            # Close settings
             close_settings()
 
         # --- Reset button ---
@@ -311,7 +315,6 @@ class Game(tk.Frame):
             self.canvas.delete('settings')
             self.show_frontpage()
 
-        # Buttons
         save_btn = tk.Button(self.master, text='Save', bg=BUTTON_COLOR, command=save_settings)
         save_btn.place(x=WINDOW_WIDTH/2 - 60, y=260)
         self.settings_widgets.append(save_btn)
@@ -323,7 +326,6 @@ class Game(tk.Frame):
         back_btn = tk.Button(self.master, text='Back', bg=BUTTON_COLOR, command=close_settings)
         back_btn.place(x=WINDOW_WIDTH/2 - 20, y=310)
         self.settings_widgets.append(back_btn)
-
 
 
 
