@@ -366,10 +366,10 @@ class Game(tk.Frame):
         self.game_running = False
 
         self.canvas.create_text(WINDOW_WIDTH / 2, WINDOW_HEIGHT / 3,
-                                text='GAME OVER!', fill='red',
+                                text='GAME OVER!', fill='Orange',
                                 font=('Arial', 30, 'bold'), tags='game_over_tag')
         self.canvas.create_text(WINDOW_WIDTH / 2, WINDOW_HEIGHT / 2,
-                                text='Press SPACE to Play Again', fill='white',
+                                text='Press SPACE to Home', fill='white',
                                 font=('Arial', 18), tags='game_over_tag')
         self.canvas.create_text(WINDOW_WIDTH / 2, WINDOW_HEIGHT / 2 + 40,
                                 text='Press ESC to Quit', fill='white',
