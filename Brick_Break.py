@@ -48,12 +48,23 @@ class Game(tk.Frame):
         super().__init__(master)
         master.title("Tkinter Brick Breaker")
 
+
+
         self.canvas = tk.Canvas(self,
                                 bg=BACKGROUND_COLOR,
                                 width=WINDOW_WIDTH,
                                 height=WINDOW_HEIGHT)
         self.canvas.pack(pady=10, padx=10)
         self.pack()
+
+
+            #pause and resume display
+        self.controls_text = self.canvas.create_text(
+        WINDOW_WIDTH - 10, 10,  # 10 pixels from right edge
+        text="P: Pause | R: Resume",
+        anchor="ne",  # Top-right corner alignment
+        font=("Helvetica", 10, "italic"),
+        fill="white")
 
         # --- SCORE ---
         self.score = 0
