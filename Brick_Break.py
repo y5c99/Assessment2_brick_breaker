@@ -186,8 +186,8 @@ class Game(tk.Frame):
                                         fill='#FFD966', tags='fp')
         self.frontpage_items.append(title)
 
-        subtitle = self.canvas.create_text(WINDOW_WIDTH/2, 140, text='Classic Arcade Fun!',
-                                           font=('Helvetica', 16), fill='#FFFFFF', tags='fp')
+        subtitle = self.canvas.create_text(WINDOW_WIDTH/2, 140, text='Arcade Fun!',
+                                           font=('Helvetica', 16, ), fill="#EBEAEA", tags='fp')
         self.frontpage_items.append(subtitle)
 
         logo = self.canvas.create_oval(WINDOW_WIDTH/2 - 60, 160, WINDOW_WIDTH/2 + 60, 280,
