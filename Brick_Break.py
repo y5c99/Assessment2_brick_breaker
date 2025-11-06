@@ -1,6 +1,4 @@
 # brick_breaker_tk.py
-# A simple Brick Breaker game using Python's Tkinter with an improved front page + score.
-# ✅ PAUSE + RESUME added (P = pause, R = resume)
 
 import tkinter as tk
 import sys
