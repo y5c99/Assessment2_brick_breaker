@@ -1,5 +1,6 @@
 # brick_breaker_tk.py
 # A simple Brick Breaker game using Python's Tkinter with an improved front page + score.
+# ✅ PAUSE + RESUME added (P = pause, R = resume)
 
 import tkinter as tk
 import sys
@@ -84,10 +85,16 @@ class Game(tk.Frame):
         self.setup_bricks()
 
         self.game_running = False
+
+        # ✅ NEW — PAUSE VARIABLES
+        self.paused = False
+        self.stored_dx = BALL_START_DX
+        self.stored_dy = BALL_START_DY
+
         self.ball_dx = BALL_START_DX
         self.ball_dy = BALL_START_DY
 
-        # IDs for menu/frontpage widgets placed on canvas
+        # For frontpage widgets
         self.frontpage_items = []
 
         # Bindings
@@ -95,51 +102,67 @@ class Game(tk.Frame):
         self.master.bind('<Right>', lambda event: self.move_paddle(PADDLE_SPEED))
         self.master.bind('<Return>', lambda event: self.start_game())
 
-        # Display the new front page layout
+        # ✅ NEW — Bind Pause + Resume keys
+        self.master.bind('p', self.pause_game)
+        self.master.bind('r', self.resume_game)
+
+        # Display front page
         self.show_frontpage()
         self.game_loop()
 
+    # ✅ NEW — Pause Function
+    def pause_game(self, event=None):
+        if self.game_running and not self.paused:
+            self.paused = True
+            self.stored_dx = self.ball_dx
+            self.stored_dy = self.ball_dy
+            self.ball_dx = 0
+            self.ball_dy = 0
+
+    # ✅ NEW — Resume Function
+    def resume_game(self, event=None):
+        if self.game_running and self.paused:
+            self.paused = False
+            self.ball_dx = self.stored_dx
+            self.ball_dy = self.stored_dy
+
     # --- Front Page ---
     def show_frontpage(self):
-        """Render a nicer front page layout with gradient and buttons."""
         self.hide_frontpage()
 
-        # Gradient background
         for i in range(20):
             color = f'#{hex(43 + i*5)[2:]}00{hex(59 + i*4)[2:]}'
-            self.canvas.create_rectangle(0, i*20, WINDOW_WIDTH, (i+1)*20, fill=color, outline=color, tags='fp')
+            self.canvas.create_rectangle(0, i*20, WINDOW_WIDTH, (i+1)*20,
+                                         fill=color, outline=color, tags='fp')
 
-        # Semi-transparent panel
         panel = self.canvas.create_rectangle(50, 50, WINDOW_WIDTH-50, WINDOW_HEIGHT-50,
-                                             fill=FRONTPAGE_PANEL, outline='#FFFFFF', width=2, tags='fp')
+                                             fill=FRONTPAGE_PANEL, outline='#FFFFFF',
+                                             width=2, tags='fp')
         self.frontpage_items.append(panel)
 
-        # Title
         title = self.canvas.create_text(WINDOW_WIDTH/2, 90, text='BRICK BREAKER',
                                         font=('Helvetica', 42, 'bold'),
                                         fill='#FFD966', tags='fp')
         self.frontpage_items.append(title)
 
-        # Subtitle
         subtitle = self.canvas.create_text(WINDOW_WIDTH/2, 140, text='Classic Arcade Fun!',
                                            font=('Helvetica', 16), fill='#FFFFFF', tags='fp')
         self.frontpage_items.append(subtitle)
 
-        # Logo placeholder
         logo = self.canvas.create_oval(WINDOW_WIDTH/2 - 60, 160, WINDOW_WIDTH/2 + 60, 280,
                                        fill='#4B0082', outline='#FFD966', width=4, tags='fp')
         self.frontpage_items.append(logo)
-        logo_text = self.canvas.create_text(WINDOW_WIDTH/2, 220, text='BB', font=('Helvetica', 32, 'bold'),
+        logo_text = self.canvas.create_text(WINDOW_WIDTH/2, 220, text='BB',
+                                            font=('Helvetica', 32, 'bold'),
                                             fill='#FFD966', tags='fp')
         self.frontpage_items.append(logo_text)
 
-        # Buttons
         self.create_frontpage_button('Start Game', WINDOW_WIDTH/2 - 100, 320, self.start_game)
         self.create_frontpage_button('Settings', WINDOW_WIDTH/2, 320, self.show_settings)
         self.create_frontpage_button('Exit', WINDOW_WIDTH/2 + 100, 320, self.quit_game)
 
-        # Instructions
-        note = self.canvas.create_text(WINDOW_WIDTH/2, 360, text='Use ← → to move the paddle — Press ENTER to start',
+        note = self.canvas.create_text(WINDOW_WIDTH/2, 360,
+                                       text='Use ← → to move — Press ENTER to start — P=Pause, R=Resume',
                                        font=('Helvetica', 10), fill='#CCCCCC', tags='fp')
         self.frontpage_items.append(note)
 
@@ -156,22 +179,21 @@ class Game(tk.Frame):
     def show_settings(self):
         self.canvas.delete('fp')
         s = self.canvas.create_text(WINDOW_WIDTH/2, WINDOW_HEIGHT/2,
-                                    text='Settings\n(coming soon)', font=('Helvetica', 20), fill='#FFFFFF', tags='settings')
-        back_btn = tk.Button(self.master, text='Back', command=lambda: (self.canvas.delete('settings'), self.show_frontpage()))
-        self.canvas.create_window(WINDOW_WIDTH/2, WINDOW_HEIGHT/2 + 60, window=back_btn, tags='settings')
+                                    text='Settings\n(coming soon)',
+                                    font=('Helvetica', 20), fill='#FFFFFF', tags='settings')
+        back_btn = tk.Button(self.master, text='Back',
+                             command=lambda: (self.canvas.delete('settings'), self.show_frontpage()))
+        self.canvas.create_window(WINDOW_WIDTH/2, WINDOW_HEIGHT/2 + 60,
+                                  window=back_btn, tags='settings')
 
     # --- Game Functions ---
     def start_game(self):
         if not self.game_running:
             self.hide_frontpage()
             self.game_running = True
-            self.master.unbind('r')
-            self.master.unbind('q')
 
     def reset_game(self, event=None):
         self.canvas.delete("game_over_tag")
-
-        # RESET SCORE
         self.score = 0
         self.canvas.itemconfig(self.score_text, text="Score: 0")
 
@@ -181,10 +203,13 @@ class Game(tk.Frame):
                            PADDLE_START_X + PADDLE_WIDTH, PADDLE_START_Y + PADDLE_HEIGHT)
         self.canvas.coords(self.ball_id, BALL_START_X - BALL_RADIUS, BALL_START_Y - BALL_RADIUS,
                            BALL_START_X + BALL_RADIUS, BALL_START_Y + BALL_RADIUS)
+
         self.ball_dx = BALL_START_DX
         self.ball_dy = -BALL_START_DY
         self.setup_bricks()
         self.game_running = False
+        self.paused = False
+
         self.show_frontpage()
 
     def quit_game(self, event=None):
@@ -193,6 +218,7 @@ class Game(tk.Frame):
 
     def game_over(self):
         self.game_running = False
+
         self.canvas.create_text(WINDOW_WIDTH / 2, WINDOW_HEIGHT / 3,
                                 text='GAME OVER!', fill='red',
                                 font=('Arial', 30, 'bold'), tags='game_over_tag')
@@ -202,11 +228,12 @@ class Game(tk.Frame):
         self.canvas.create_text(WINDOW_WIDTH / 2, WINDOW_HEIGHT / 2 + 40,
                                 text='Press ESC to Quit', fill='white',
                                 font=('Arial', 18), tags='game_over_tag')
+
         self.master.bind('<space>', self.reset_game)
         self.master.bind('<Escape>', self.quit_game)
 
     def move_paddle(self, offset):
-        if not self.game_running:
+        if not self.game_running or self.paused:
             return
         coords = self.canvas.coords(self.paddle_id)
         new_x1 = coords[0] + offset
@@ -218,18 +245,17 @@ class Game(tk.Frame):
         ball_left, ball_top, ball_right, ball_bottom = ball_coords
         paddle_coords = self.canvas.coords(self.paddle_id)
         paddle_left, paddle_top, paddle_right, paddle_bottom = paddle_coords
-        if self.ball_dy > 0 and ball_bottom >= paddle_top and ball_bottom <= paddle_bottom \
-                and ball_right >= paddle_left and ball_left <= paddle_right:
+        if self.ball_dy > 0 and paddle_top <= ball_bottom <= paddle_bottom and \
+           paddle_left <= ball_right and ball_left <= paddle_right:
             self.ball_dy *= -1
 
     def check_brick_collision(self, ball_coords):
-        overlapping_objects = self.canvas.find_overlapping(*ball_coords)
-        for obj_id in overlapping_objects:
+        overlapping = self.canvas.find_overlapping(*ball_coords)
+        for obj_id in overlapping:
             if obj_id in self.bricks:
                 self.canvas.delete(obj_id)
                 self.bricks.remove(obj_id)
 
-                # ✅ SCORE +1
                 self.score += 1
                 self.canvas.itemconfig(self.score_text, text=f"Score: {self.score}")
 
@@ -245,25 +271,31 @@ class Game(tk.Frame):
                 brick_y1 = BRICK_OFFSET_TOP + row * (BRICK_HEIGHT + BRICK_PADDING)
                 brick_x2 = brick_x1 + BRICK_WIDTH
                 brick_y2 = brick_y1 + BRICK_HEIGHT
-                brick_id = self.canvas.create_rectangle(brick_x1, brick_y1, brick_x2, brick_y2,
+                brick_id = self.canvas.create_rectangle(brick_x1, brick_y1,
+                                                        brick_x2, brick_y2,
                                                         fill=BRICK_COLOR, tags='brick')
                 self.bricks.append(brick_id)
 
     def game_loop(self):
-        if self.game_running:
+        if self.game_running and not self.paused:
             self.canvas.move(self.ball_id, self.ball_dx, self.ball_dy)
             ball_coords = self.canvas.coords(self.ball_id)
             ball_left, ball_top, ball_right, ball_bottom = ball_coords
+
             if ball_bottom >= WINDOW_HEIGHT:
                 self.game_over()
+
             if ball_left <= 0 or ball_right >= WINDOW_WIDTH:
                 self.ball_dx *= -1
+
             if ball_top <= 0:
                 self.ball_dy *= -1
+
             self.check_paddle_collision(ball_coords)
             self.check_brick_collision(ball_coords)
             if not self.bricks:
                 self.game_over()
+
         self.master.after(30, self.game_loop)
 
 
