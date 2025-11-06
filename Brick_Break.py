@@ -1,5 +1,5 @@
 # brick_breaker_tk.py
-# A simple Brick Breaker game using Python's Tkinter with an improved front page.
+# A simple Brick Breaker game using Python's Tkinter with an improved front page + score.
 
 import tkinter as tk
 import sys
@@ -9,11 +9,11 @@ WINDOW_WIDTH = 600
 WINDOW_HEIGHT = 400
 
 # --- Colors ---
-PADDLE_COLOR = '#FF9933'
-BALL_COLOR = '#FFFF00'
-BACKGROUND_COLOR = '#1A0033'
-BRICK_COLOR = '#33CCFF'
-FRONTPAGE_BG = '#2B003B'
+PADDLE_COLOR = "#B7CD28"
+BALL_COLOR = "#E79625"
+BACKGROUND_COLOR = "#597C9F"
+BRICK_COLOR = "#203F8C"
+FRONTPAGE_BG = "#97869D"
 FRONTPAGE_PANEL = '#3D0070'
 BUTTON_COLOR = '#FFD966'
 BUTTON_HOVER = '#FFB347'
@@ -56,6 +56,17 @@ class Game(tk.Frame):
         self.canvas.pack(pady=10, padx=10)
         self.pack()
 
+        # --- SCORE ---
+        self.score = 0
+        self.score_text = self.canvas.create_text(
+            10, 10,
+            text="Score: 0",
+            anchor="nw",
+            font=("Helvetica", 14, "bold"),
+            fill="white",
+            tags="score"
+        )
+
         # Create game objects
         self.paddle_id = self.canvas.create_rectangle(
             PADDLE_START_X, PADDLE_START_Y,
@@ -76,7 +87,7 @@ class Game(tk.Frame):
         self.ball_dx = BALL_START_DX
         self.ball_dy = BALL_START_DY
 
-        # IDs for menu/frontpage widgets placed on canvas (so we can remove them)
+        # IDs for menu/frontpage widgets placed on canvas
         self.frontpage_items = []
 
         # Bindings
@@ -93,7 +104,7 @@ class Game(tk.Frame):
         """Render a nicer front page layout with gradient and buttons."""
         self.hide_frontpage()
 
-        # Gradient background using multiple rectangles
+        # Gradient background
         for i in range(20):
             color = f'#{hex(43 + i*5)[2:]}00{hex(59 + i*4)[2:]}'
             self.canvas.create_rectangle(0, i*20, WINDOW_WIDTH, (i+1)*20, fill=color, outline=color, tags='fp')
@@ -109,7 +120,7 @@ class Game(tk.Frame):
                                         fill='#FFD966', tags='fp')
         self.frontpage_items.append(title)
 
-        # Subtitle / tagline
+        # Subtitle
         subtitle = self.canvas.create_text(WINDOW_WIDTH/2, 140, text='Classic Arcade Fun!',
                                            font=('Helvetica', 16), fill='#FFFFFF', tags='fp')
         self.frontpage_items.append(subtitle)
@@ -133,7 +144,6 @@ class Game(tk.Frame):
         self.frontpage_items.append(note)
 
     def create_frontpage_button(self, text, x, y, command):
-        """Helper to create a canvas button with hover effect."""
         btn = tk.Button(self.master, text=text, font=('Helvetica', 12, 'bold'),
                         bg=BUTTON_COLOR, activebackground=BUTTON_HOVER, command=command)
         btn_id = self.canvas.create_window(x, y, window=btn, tags='fp')
@@ -160,6 +170,11 @@ class Game(tk.Frame):
 
     def reset_game(self, event=None):
         self.canvas.delete("game_over_tag")
+
+        # RESET SCORE
+        self.score = 0
+        self.canvas.itemconfig(self.score_text, text="Score: 0")
+
         self.master.unbind('<space>')
         self.master.unbind('<Escape>')
         self.canvas.coords(self.paddle_id, PADDLE_START_X, PADDLE_START_Y,
@@ -213,6 +228,11 @@ class Game(tk.Frame):
             if obj_id in self.bricks:
                 self.canvas.delete(obj_id)
                 self.bricks.remove(obj_id)
+
+                # ✅ SCORE +1
+                self.score += 1
+                self.canvas.itemconfig(self.score_text, text=f"Score: {self.score}")
+
                 self.ball_dy *= -1
                 return
 
