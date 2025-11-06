@@ -100,7 +100,7 @@ class Game(tk.Frame):
         self.master.bind('<Right>', lambda event: self.move_paddle(PADDLE_SPEED))
         self.master.bind('<Return>', lambda event: self.start_game())
 
-        # ✅ NEW — Bind Pause + Resume keys
+        #  NEW — Bind Pause + Resume keys
         self.master.bind('p', self.pause_game)
         self.master.bind('r', self.resume_game)
 
@@ -108,7 +108,8 @@ class Game(tk.Frame):
         self.show_frontpage()
         self.game_loop()
 
-    # ✅ NEW — Pause Function
+        #  NEW — Pause Function
+    # --- Pause & Resume with Countdown ---
     def pause_game(self, event=None):
         if self.game_running and not self.paused:
             self.paused = True
@@ -117,12 +118,43 @@ class Game(tk.Frame):
             self.ball_dx = 0
             self.ball_dy = 0
 
-    # ✅ NEW — Resume Function
+            # Show "Game Paused" text
+            self.paused_text_id = self.canvas.create_text(
+                WINDOW_WIDTH/2, WINDOW_HEIGHT/2,
+                text="GAME PAUSED",
+                font=("Helvetica", 36, "bold"),
+                fill="yellow",
+                tags="paused"
+            )
+
     def resume_game(self, event=None):
         if self.game_running and self.paused:
             self.paused = False
+
+            # Remove paused text
+            self.canvas.delete("paused")
+
+            # Start countdown before resuming
+            self.start_countdown(3)
+
+    def start_countdown(self, count):
+        """Displays a countdown from count to 1, then resumes ball movement."""
+        if count > 0:
+            self.canvas.delete("countdown")
+            self.countdown_text_id = self.canvas.create_text(
+                WINDOW_WIDTH/2, WINDOW_HEIGHT/2,
+                text=str(count),
+                font=("Helvetica", 48, "bold"),
+                fill="red",
+                tags="countdown"
+            )
+            self.master.after(1000, lambda: self.start_countdown(count - 1))
+        else:
+            # Remove countdown and restore ball movement
+            self.canvas.delete("countdown")
             self.ball_dx = self.stored_dx
             self.ball_dy = self.stored_dy
+
 
     # --- Front Page ---
     def show_frontpage(self):
