@@ -104,7 +104,7 @@ class Game(tk.Frame):
 
         self.game_running = False
 
-        #  — PAUSE VARIABLES
+        # PAUSE VARIABLES
         self.paused = False
         self.stored_dx = BALL_START_DX
         self.stored_dy = BALL_START_DY
@@ -198,7 +198,7 @@ class Game(tk.Frame):
         self.frontpage_items.append(title)
 
         subtitle = self.canvas.create_text(WINDOW_WIDTH/2, 140, text='Classic Arcade Fun!',
-                                           font=('Helvetica', 16), fill='#FFFFFF', tags='fp')
+                                            font=('Helvetica', 16), fill='#FFFFFF', tags='fp')
         self.frontpage_items.append(subtitle)
 
         # Logo updated to be smaller and more centered
@@ -240,14 +240,123 @@ class Game(tk.Frame):
         self.frontpage_items = []
 
     def show_settings(self):
-        self.canvas.delete('fp')
-        s = self.canvas.create_text(WINDOW_WIDTH/2, WINDOW_HEIGHT/2,
-                                    text='Settings\n(coming soon)',
-                                    font=('Helvetica', 20), fill='#FFFFFF', tags='settings')
-        back_btn = tk.Button(self.master, text='Back',
-                             command=lambda: (self.canvas.delete('settings'), self.show_frontpage()))
-        self.canvas.create_window(WINDOW_WIDTH/2, WINDOW_HEIGHT/2 + 60,
-                                  window=back_btn, tags='settings')
+        # Remove frontpage or previous settings
+        self.hide_frontpage()
+        self.canvas.delete('settings')
+        if hasattr(self, 'settings_widgets'):
+            for w in self.settings_widgets:
+                w.destroy()
+        self.settings_widgets = []
+
+        # Settings title
+        self.canvas.create_text(WINDOW_WIDTH/2, 50,
+                                 text='Settings',
+                                 font=('Helvetica', 24, 'bold'),
+                                 fill='white', tags='settings')
+
+        # Default values for settings (use current values if already set)
+        if not hasattr(self, 'temp_ball_speed'):
+            self.temp_ball_speed = 'Normal'
+        if not hasattr(self, 'temp_paddle_size'):
+            self.temp_paddle_size = 'Normal'
+        if not hasattr(self, 'temp_brick_color'):
+            self.temp_brick_color = 'Blue'
+
+        # --- Ball Speed ---
+        # Positioning labels and menus relative to the canvas
+        label_speed = tk.Label(self.master, text="Ball Speed:", bg=BACKGROUND_COLOR, fg='white')
+        label_speed.place(x=150 + self.canvas.winfo_x(), y=100 + self.canvas.winfo_y())
+        self.settings_widgets.append(label_speed)
+
+        speed_var = tk.StringVar(value=self.temp_ball_speed)
+        speed_menu = tk.OptionMenu(self.master, speed_var, 'Slow', 'Normal', 'Fast')
+        speed_menu.place(x=250 + self.canvas.winfo_x(), y=95 + self.canvas.winfo_y())
+        self.settings_widgets.append(speed_menu)
+
+        # --- Paddle Size ---
+        label_paddle = tk.Label(self.master, text="Paddle Size:", bg=BACKGROUND_COLOR, fg='white')
+        label_paddle.place(x=150 + self.canvas.winfo_x(), y=150 + self.canvas.winfo_y())
+        self.settings_widgets.append(label_paddle)
+
+        paddle_var = tk.StringVar(value=self.temp_paddle_size)
+        paddle_menu = tk.OptionMenu(self.master, paddle_var, 'Small', 'Normal', 'Large')
+        paddle_menu.place(x=250 + self.canvas.winfo_x(), y=145 + self.canvas.winfo_y())
+        self.settings_widgets.append(paddle_menu)
+
+        # --- Brick Color ---
+        label_brick = tk.Label(self.master, text="Brick Color:", bg=BACKGROUND_COLOR, fg='white')
+        label_brick.place(x=150 + self.canvas.winfo_x(), y=200 + self.canvas.winfo_y())
+        self.settings_widgets.append(label_brick)
+
+        brick_var = tk.StringVar(value=self.temp_brick_color)
+        brick_menu = tk.OptionMenu(self.master, brick_var, 'Blue', 'Red', 'Green')
+        brick_menu.place(x=250 + self.canvas.winfo_x(), y=195 + self.canvas.winfo_y())
+        self.settings_widgets.append(brick_menu)
+
+        # --- Save button ---
+        def save_settings():
+            # Apply Ball Speed
+            val = speed_var.get()
+            speed_multiplier = {'Slow': 0.5, 'Normal': 1.0, 'Fast': 1.5}
+            multiplier = speed_multiplier.get(val, 1.0)
+            self.ball_dx = BASE_SPEED * multiplier
+            self.ball_dy = -BASE_SPEED * multiplier
+            self.stored_dx = self.ball_dx
+            self.stored_dy = self.ball_dy
+            self.temp_ball_speed = val
+
+            # Apply Paddle Size
+            val = paddle_var.get()
+            size_map = {'Small': 60, 'Normal': 100, 'Large': 140}
+            global PADDLE_WIDTH # Need global to modify constant
+            PADDLE_WIDTH = size_map.get(val, 100)
+            self.temp_paddle_size = val
+            # Update paddle position (x1, y1, x2, y2)
+            coords = self.canvas.coords(self.paddle_id)
+            # Use the existing center (coords[0] + (coords[2]-coords[0])/2) and adjust width
+            center_x = (coords[0] + coords[2]) / 2
+            x1 = center_x - PADDLE_WIDTH / 2
+            x2 = center_x + PADDLE_WIDTH / 2
+            self.canvas.coords(self.paddle_id, x1, PADDLE_START_Y, x2, PADDLE_START_Y + PADDLE_HEIGHT)
+
+
+            # Apply Brick Color
+            val = brick_var.get()
+            color_map = {'Blue':'#203F8C', 'Red':'#FF4C4C', 'Green':'#28B78F'}
+            global BRICK_COLOR
+            BRICK_COLOR = color_map.get(val, '#203F8C')
+            self.setup_bricks()
+            self.temp_brick_color = val
+
+            # Close settings
+            close_settings()
+
+        # --- Reset button ---
+        def reset_settings():
+            speed_var.set('Normal')
+            paddle_var.set('Normal')
+            brick_var.set('Blue')
+
+        # --- Close settings ---
+        def close_settings():
+            for w in self.settings_widgets:
+                w.destroy()
+            self.settings_widgets = []
+            self.canvas.delete('settings')
+            self.show_frontpage()
+
+        # Place buttons relative to the canvas frame
+        save_btn = tk.Button(self.master, text='Save', bg=BUTTON_COLOR, command=save_settings)
+        save_btn.place(x=WINDOW_WIDTH/2 - 60 + self.canvas.winfo_x(), y=260 + self.canvas.winfo_y())
+        self.settings_widgets.append(save_btn)
+
+        reset_btn = tk.Button(self.master, text='Reset', bg=BUTTON_COLOR, command=reset_settings)
+        reset_btn.place(x=WINDOW_WIDTH/2 + 20 + self.canvas.winfo_x(), y=260 + self.canvas.winfo_y())
+        self.settings_widgets.append(reset_btn)
+
+        back_btn = tk.Button(self.master, text='Back', bg=BUTTON_COLOR, command=close_settings)
+        back_btn.place(x=WINDOW_WIDTH/2 - 20 + self.canvas.winfo_x(), y=310 + self.canvas.winfo_y())
+        self.settings_widgets.append(back_btn)
 
     # --- Game Functions ---
     def start_game(self):
@@ -327,14 +436,17 @@ class Game(tk.Frame):
         self.canvas.delete("reset_msg") # Clean up any life lost message
 
         self.canvas.create_text(WINDOW_WIDTH / 2, WINDOW_HEIGHT / 3,
-                                text='GAME OVER!', fill='red',
-                                font=('Arial', 30, 'bold'), tags='game_over_tag')
+                                 text='GAME OVER!', fill='Orange',
+                                 font=('Arial', 30, 'bold'), tags='game_over_tag')
         self.canvas.create_text(WINDOW_WIDTH / 2, WINDOW_HEIGHT / 2,
-                                text='Press SPACE to Play Again', fill='white',
-                                font=('Arial', 18), tags='game_over_tag')
-        self.canvas.create_text(WINDOW_WIDTH / 2, WINDOW_HEIGHT / 2 + 40,
-                                text='Press ESC to Quit', fill='white',
-                                font=('Arial', 18), tags='game_over_tag')
+                                 text=f'Final Score: {self.score}', fill='yellow',
+                                 font=('Arial', 24, 'bold'), tags='game_over_tag')
+        self.canvas.create_text(WINDOW_WIDTH / 2, WINDOW_HEIGHT / 2 + 50,
+                                 text='Press SPACE to Home', fill='white',
+                                 font=('Arial', 14), tags='game_over_tag')
+        self.canvas.create_text(WINDOW_WIDTH / 2, WINDOW_HEIGHT / 2 + 75,
+                                 text='Press ESC to Quit', fill='white',
+                                 font=('Arial', 14), tags='game_over_tag')
 
         self.master.bind('<space>', self.reset_game)
         self.master.bind('<Escape>', self.quit_game)
